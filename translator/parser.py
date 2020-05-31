@@ -45,6 +45,7 @@ class ByteCodeInst:
         "add": Command.ADD,
         "sub": Command.SUB,
         "neg": Command.NEG,
+        "eq": Command.EQ,
         "constant": Segment.CONSTANT,
     }
 
@@ -76,8 +77,10 @@ class ByteCodeInst:
             inst = self._build_add()
         elif self.cmd == Command.SUB:
             inst = self._build_sub()
+        elif self.cmd == Command.EQ:
+            inst = self._build_eq()
         else:
-            inst = ""
+            raise ValueError("Unsupported command.")
 
         return clean_instructions(inst)
 
@@ -145,8 +148,60 @@ class ByteCodeInst:
             """
         )
 
-    def _build_neg(self) -> str:
-        return ""
+    def _build_eq(self) -> str:
+        """
+        eq -> x==0
+
+
+        SP--
+        temp0 = *SP
+        SP--
+        *SP = 0 == temp0
+        SP++
+        """
+        return dedent(
+            """
+            // SP--
+            @SP
+            M=M-1
+            // D = *SP
+            A=M
+            D=M
+            // SP--
+            @SP
+            M=M-1
+            // *SP = !*SP
+            A=M
+            M=!M
+            // D = D & *SP
+            D=D&M
+            
+            // if D == 0
+            @EQUAL
+            D;JEQ
+            // else
+            @NOT_EQUAL
+            D;JNE
+            
+            (EQUAL)
+            // True in Hack ASM is -1
+            @SP
+            A=M
+            M=-1
+            // SP++
+            @SP
+            M=M+1
+            
+            (NOT_EQUAL)
+            // False in Hack ASM is 0
+            @SP
+            A=M
+            M=0
+            // SP++
+            @SP
+            M=M+1
+            """
+        )
 
 
 def parse(ins: str) -> List[ByteCodeInst]:

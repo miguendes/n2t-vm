@@ -82,7 +82,6 @@ def test_push_const_to_asm(byte_code, asm):
     ],
 )
 def test_add_to_asm(byte_code, asm):
-    0
     assert byte_code.to_assembly() == asm
 
 
@@ -96,4 +95,20 @@ def test_add_to_asm(byte_code, asm):
     ],
 )
 def test_add_to_asm(byte_code, asm):
+    assert byte_code.to_assembly() == asm
+
+
+@pytest.mark.parametrize(
+    "byte_code, asm",
+    [
+        (
+            ByteCodeInst(cmd=Command.EQ),
+            "@SP\nM=M-1\nA=M\nD=M\n@SP\nM=M-1\nA=M\nM=!M\nD=D&M\n"
+            "@EQUAL\nD;JEQ\n@NOT_EQUAL\nD;JNE\n"
+            "(EQUAL)\n@SP\nA=M\nM=-1\n@SP\nM=M+1\n"
+            "(NOT_EQUAL)\n@SP\nA=M\nM=0\n@SP\nM=M+1",
+        )
+    ],
+)
+def test_eq_to_asm(byte_code, asm):
     assert byte_code.to_assembly() == asm
