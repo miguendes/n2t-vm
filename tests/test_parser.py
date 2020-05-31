@@ -37,7 +37,7 @@ from translator.parser import clean_instructions, ByteCodeInst, Command, Segment
     ],
 )
 def test_clean_instructions(ins, expected):
-    cleaned = clean_instructions(ins)
+    cleaned = clean_instructions(ins, to_lower=True)
     assert cleaned == expected
 
 
@@ -64,20 +64,7 @@ def test_inst_to_byte_code(inst: str, byte_code: ByteCodeInst) -> None:
     [
         (
             ByteCodeInst(cmd=Command.PUSH, segment=Segment.CONSTANT, value=6),
-            clean_instructions(
-                dedent(
-                    """
-                @6
-                D=A
-                @SP
-                A=M
-                M=D
-                // Comment
-                @SP
-                M=M+1   
-                """
-                )
-            ),
+            "@6\nD=A\n@SP\nA=M\nM=D\n@SP\nM=M+1",
         )
     ],
 )
@@ -90,24 +77,23 @@ def test_push_const_to_asm(byte_code, asm):
     [
         (
             ByteCodeInst(cmd=Command.ADD),
-            clean_instructions(
-                dedent(
-                    """
-                @SP
-                M=M-1
-                A=M
-                D=M
-                @SP
-                M=M-1
-                A=M
-                M=D+M
-                @SP
-                M=M+1
-                """
-                )
-            ),
+            "@SP\nM=M-1\nA=M\nD=M\n@SP\nM=M-1\nA=M\nM=M-D\n@SP\nM=M+1",
         )
     ],
 )
 def test_add_to_asm(byte_code, asm):
-    assert byte_code.to_assembly() == (asm)
+    0
+    assert byte_code.to_assembly() == asm
+
+
+@pytest.mark.parametrize(
+    "byte_code, asm",
+    [
+        (
+            ByteCodeInst(cmd=Command.SUB),
+            "@SP\nM=M-1\nA=M\nD=M\n@SP\nM=M-1\nA=M\nM=M-D\n@SP\nM=M+1",
+        )
+    ],
+)
+def test_add_to_asm(byte_code, asm):
+    assert byte_code.to_assembly() == asm

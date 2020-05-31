@@ -11,17 +11,19 @@ def clean(ins: str) -> List[str]:
         if not line or line.startswith("//"):
             continue
         line = " ".join(re.split(r"\s+", line, flags=re.UNICODE))
-        yield line.lower()
+        yield line
 
 
-def clean_instructions(ins: str) -> str:
-    return "\n".join(clean(ins))
+def clean_instructions(ins: str, to_lower: bool = False) -> str:
+    inst = "\n".join(clean(ins))
+    return inst.lower() if to_lower else inst
 
 
 class Command(Enum):
     PUSH = 1
     POP = 2
     ADD = 3
+    SUB = 4
 
 
 class Segment(Enum):
@@ -34,6 +36,7 @@ class ByteCodeInst:
         "push": Command.PUSH,
         "pop": Command.POP,
         "add": Command.ADD,
+        "sub": Command.SUB,
         "constant": Segment.CONSTANT,
     }
 
@@ -55,10 +58,16 @@ class ByteCodeInst:
             return cls(cmd)
 
     def to_assembly(self) -> str:
+        """
+        Returns a clean set of assembly instructions that performs
+        the byte code operation.
+        """
         if self.cmd == Command.PUSH and self.segment.CONSTANT:
             inst = self._build_push_constant()
         elif self.cmd == Command.ADD:
             inst = self._build_add()
+        elif self.cmd == Command.SUB:
+            inst = self._build_sub()
         else:
             inst = ""
 
@@ -87,7 +96,7 @@ class ByteCodeInst:
         SP--
         temp0 = *SP
         SP--
-        *SP = temp0 + *SP
+        *SP = *SP - temp0
         SP++
         """
         return dedent(
@@ -99,9 +108,32 @@ class ByteCodeInst:
             @SP
             M=M-1
             A=M
-            M=D+M
+            M=M+D
             @SP
-            M=M+1     
+            M=M+1
+            """
+        )
+
+    def _build_sub(self) -> str:
+        """
+        SP--
+        temp0 = *SP
+        SP--
+        *SP = *SP - temp0
+        SP++
+        """
+        return dedent(
+            """
+            @SP
+            M=M-1
+            A=M
+            D=M
+            @SP
+            M=M-1
+            A=M
+            M=M-D
+            @SP
+            M=M+1
             """
         )
 
