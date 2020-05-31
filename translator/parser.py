@@ -24,6 +24,13 @@ class Command(Enum):
     POP = 2
     ADD = 3
     SUB = 4
+    NEG = 5
+    EQ = 6
+    GT = 7
+    LT = 8
+    AND = 9
+    OR = 10
+    NOT = 11
 
 
 class Segment(Enum):
@@ -37,6 +44,7 @@ class ByteCodeInst:
         "pop": Command.POP,
         "add": Command.ADD,
         "sub": Command.SUB,
+        "neg": Command.NEG,
         "constant": Segment.CONSTANT,
     }
 
@@ -136,6 +144,9 @@ class ByteCodeInst:
             M=M+1
             """
         )
+
+    def _build_neg(self) -> str:
+        return ""
 
 
 def parse(ins: str) -> List[ByteCodeInst]:
