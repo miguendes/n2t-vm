@@ -19,6 +19,14 @@ def clean_instructions(ins: str, to_lower: bool = False) -> str:
     return inst.lower() if to_lower else inst
 
 
+class InvalidCommandException(Exception):
+    """Raised when a command is built from a non-existent command."""
+
+
+class InvalidSegmentException(Exception):
+    """Raised when a command is built from a non-existent command."""
+
+
 class Command(Enum):
     PUSH = 1
     POP = 2
@@ -32,23 +40,39 @@ class Command(Enum):
     OR = 10
     NOT = 11
 
+    @classmethod
+    def from_string(cls, raw_cmd: str) -> "Command":
+        if raw_cmd == "push":
+            return cls.PUSH
+        elif raw_cmd == "pop":
+            return cls.POP
+        elif raw_cmd == "add":
+            return cls.ADD
+        elif raw_cmd == "sub":
+            return cls.SUB
+        elif raw_cmd == "neg":
+            return cls.NEG
+        elif raw_cmd == "eq":
+            return cls.EQ
+        else:
+            raise InvalidCommandException("Invalid command.")
+
 
 class Segment(Enum):
     CONSTANT = 1
 
+    _SYMBOL_TABLE = {"constant": CONSTANT}
+
+    @classmethod
+    def from_string(cls, raw_seg: str) -> "Segment":
+        if raw_seg == "constant":
+            return cls.CONSTANT
+        else:
+            raise InvalidSegmentException("Invalid segment.")
+
 
 @dataclass
 class ByteCodeInst:
-    _SYMBOL_TABLE = {
-        "push": Command.PUSH,
-        "pop": Command.POP,
-        "add": Command.ADD,
-        "sub": Command.SUB,
-        "neg": Command.NEG,
-        "eq": Command.EQ,
-        "constant": Segment.CONSTANT,
-    }
-
     cmd: Command
     segment: Optional[Segment] = None
     value: Optional[int] = None
@@ -56,15 +80,15 @@ class ByteCodeInst:
     @classmethod
     def from_string(cls, line: str) -> "ByteCodeInst":
         tokens = line.split()
+
         try:
             raw_cmd, raw_seg, value = tokens
-            cmd = cls._SYMBOL_TABLE[raw_cmd]
-            segment = cls._SYMBOL_TABLE[raw_seg]
-            value = int(value)
-            return cls(cmd, segment, value)
         except ValueError:
-            cmd = cls._SYMBOL_TABLE[tokens[0]]
-            return cls(cmd)
+            return cls(Command.from_string(tokens[0]))
+
+        return cls(
+            Command.from_string(raw_cmd), Segment.from_string(raw_seg), int(value)
+        )
 
     def to_asm(self) -> str:
         """
