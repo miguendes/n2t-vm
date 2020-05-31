@@ -66,7 +66,7 @@ class ByteCodeInst:
             cmd = cls._SYMBOL_TABLE[tokens[0]]
             return cls(cmd)
 
-    def to_assembly(self) -> str:
+    def to_asm(self) -> str:
         """
         Returns a clean set of assembly instructions that performs
         the byte code operation.

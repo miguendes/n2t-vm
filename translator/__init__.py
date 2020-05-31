@@ -16,7 +16,7 @@ TEST_EQ_ASM = TEST_CODE_DIR / "test_eq.asm"
 def translate(inst: str) -> str:
     cleaned_inst = clean_instructions(inst, to_lower=True)
     byte_codes = parse(cleaned_inst)
-    return "\n".join([byte_code.to_assembly() for byte_code in byte_codes])
+    return "\n".join([byte_code.to_asm() for byte_code in byte_codes])
 
 
 if __name__ == "__main__":

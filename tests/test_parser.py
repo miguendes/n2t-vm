@@ -69,7 +69,7 @@ def test_inst_to_byte_code(inst: str, byte_code: ByteCodeInst) -> None:
     ],
 )
 def test_push_const_to_asm(byte_code, asm):
-    assert byte_code.to_assembly() == asm
+    assert byte_code.to_asm() == asm
 
 
 @pytest.mark.parametrize(
@@ -82,7 +82,7 @@ def test_push_const_to_asm(byte_code, asm):
     ],
 )
 def test_add_to_asm(byte_code, asm):
-    assert byte_code.to_assembly() == asm
+    assert byte_code.to_asm() == asm
 
 
 @pytest.mark.parametrize(
@@ -95,7 +95,7 @@ def test_add_to_asm(byte_code, asm):
     ],
 )
 def test_add_to_asm(byte_code, asm):
-    assert byte_code.to_assembly() == asm
+    assert byte_code.to_asm() == asm
 
 
 @pytest.mark.parametrize(
@@ -111,4 +111,4 @@ def test_add_to_asm(byte_code, asm):
     ],
 )
 def test_eq_to_asm(byte_code, asm):
-    assert byte_code.to_assembly() == asm
+    assert byte_code.to_asm() == asm
