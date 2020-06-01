@@ -57,6 +57,8 @@ class Command(Enum):
             return cls.EQ
         elif raw_cmd == "lt":
             return cls.LT
+        elif raw_cmd == "gt":
+            return cls.GT
         else:
             raise InvalidCommandException("Invalid command.")
 
@@ -117,6 +119,8 @@ class ByteCodeInst:
             inst = self._build_eq()
         elif self.cmd == Command.LT:
             inst = self._build_lt()
+        elif self.cmd == Command.GT:
+            inst = self._build_gt()
         else:
             raise ValueError("Unsupported command.")
 
@@ -299,6 +303,65 @@ class ByteCodeInst:
             @SP
             M=M+1
             
+            (END_IF{self.label_suffix})
+            D=0
+            """
+        )
+
+    def _build_gt(self) -> str:
+        """
+        lt -> x > y
+
+        SP--
+        x = *SP
+        SP--
+        y = *SP
+        *SP = -1 if x > y else 0
+        SP++
+        """
+        return dedent(
+            f"""
+            // SP--
+            @SP
+            M=M-1
+            // D = *SP
+            A=M
+            D=M
+            // SP--
+            @SP
+            M=M-1
+            // D = *SP - D  <--> x - y
+            A=M
+            D=M-D
+            M=D
+
+            // if x > 0
+            @IS_GT{self.label_suffix}
+            D;JGT
+            // else
+            @ELSE{self.label_suffix}
+            D;JLE
+
+            (IS_GT{self.label_suffix})
+            // True in Hack ASM is -1
+            @SP
+            A=M
+            M=-1
+            // SP++
+            @SP
+            M=M+1
+            @END_IF{self.label_suffix}
+            0;JEQ
+
+            (ELSE{self.label_suffix})
+            // False in Hack ASM is 0
+            @SP
+            A=M
+            M=0
+            // SP++
+            @SP
+            M=M+1
+
             (END_IF{self.label_suffix})
             D=0
             """

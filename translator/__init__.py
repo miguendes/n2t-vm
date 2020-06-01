@@ -15,6 +15,9 @@ TEST_EQ_ASM = TEST_CODE_DIR / "test_eq/test_eq.asm"
 TEST_LT = TEST_CODE_DIR / "test_lt/test_lt.vm"
 TEST_LT_ASM = TEST_CODE_DIR / "test_lt/test_lt.asm"
 
+TEST_GT = TEST_CODE_DIR / "test_gt/test_gt.vm"
+TEST_GT_ASM = TEST_CODE_DIR / "test_gt/test_gt.asm"
+
 
 def translate(inst: str) -> str:
     cleaned_inst = clean_instructions(inst, to_lower=True)
@@ -23,10 +26,10 @@ def translate(inst: str) -> str:
 
 
 if __name__ == "__main__":
-    with open(TEST_EQ) as f:
+    with open(TEST_GT) as f:
         inst = f.read()
 
-    with open(TEST_EQ_ASM, "w") as f:
+    with open(TEST_GT_ASM, "w") as f:
         s = translate(inst)
         f.write(s)
         print(s)
