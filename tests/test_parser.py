@@ -148,3 +148,16 @@ def test_lt_to_asm(byte_code, asm):
 )
 def test_lt_to_asm(byte_code, asm):
     assert byte_code.to_asm() == asm
+
+
+@pytest.mark.parametrize(
+    "byte_code, asm",
+    [
+        (
+            ByteCodeInst(label_suffix="", cmd=Command.NOT),
+            "@SP\nM=M-1\nA=M\nD=M\n@SP\nA=M\nM=!D\n@SP\nM=M+1",
+        )
+    ],
+)
+def test_not_to_asm(byte_code, asm):
+    assert byte_code.to_asm() == asm

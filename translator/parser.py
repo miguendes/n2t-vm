@@ -59,6 +59,8 @@ class Command(Enum):
             return cls.LT
         elif raw_cmd == "gt":
             return cls.GT
+        elif raw_cmd == "not":
+            return cls.NOT
         else:
             raise InvalidCommandException("Invalid command.")
 
@@ -121,6 +123,8 @@ class ByteCodeInst:
             inst = self._build_lt()
         elif self.cmd == Command.GT:
             inst = self._build_gt()
+        elif self.cmd == Command.NOT:
+            inst = self._build_not()
         else:
             raise ValueError("Unsupported command.")
 
@@ -364,6 +368,32 @@ class ByteCodeInst:
 
             (END_IF{self.label_suffix})
             D=0
+            """
+        )
+
+    def _build_not(self):
+        """
+         not -> !x
+
+         SP--
+         x = *SP
+         *SP = !*SP
+         SP++
+         """
+        return dedent(
+            f"""
+            // SP--
+            @SP
+            M=M-1
+            // D = *SP
+            A=M
+            D=M
+            // *SP = !D
+            @SP
+            A=M
+            M=!D
+            @SP
+            M=M+1
             """
         )
 
