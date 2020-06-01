@@ -1,3 +1,4 @@
+import random
 import re
 from dataclasses import dataclass
 from enum import Enum
@@ -54,6 +55,8 @@ class Command(Enum):
             return cls.NEG
         elif raw_cmd == "eq":
             return cls.EQ
+        elif raw_cmd == "lt":
+            return cls.LT
         else:
             raise InvalidCommandException("Invalid command.")
 
@@ -73,21 +76,30 @@ class Segment(Enum):
 
 @dataclass
 class ByteCodeInst:
+    label_suffix: str
     cmd: Command
     segment: Optional[Segment] = None
     value: Optional[int] = None
 
     @classmethod
-    def from_string(cls, line: str) -> "ByteCodeInst":
+    def from_string(
+        cls, line: str, label_suffix: Optional[str] = None
+    ) -> "ByteCodeInst":
+        if label_suffix is None:
+            label_suffix = str(random.randint(0, 1_000_000))
+
         tokens = line.split()
 
         try:
             raw_cmd, raw_seg, value = tokens
         except ValueError:
-            return cls(Command.from_string(tokens[0]))
+            return cls(label_suffix, Command.from_string(tokens[0]))
 
         return cls(
-            Command.from_string(raw_cmd), Segment.from_string(raw_seg), int(value)
+            label_suffix,
+            Command.from_string(raw_cmd),
+            Segment.from_string(raw_seg),
+            int(value),
         )
 
     def to_asm(self) -> str:
@@ -103,6 +115,8 @@ class ByteCodeInst:
             inst = self._build_sub()
         elif self.cmd == Command.EQ:
             inst = self._build_eq()
+        elif self.cmd == Command.LT:
+            inst = self._build_lt()
         else:
             raise ValueError("Unsupported command.")
 
@@ -184,7 +198,7 @@ class ByteCodeInst:
         SP++
         """
         return dedent(
-            """
+            f"""
             // SP--
             @SP
             M=M-1
@@ -194,20 +208,19 @@ class ByteCodeInst:
             // SP--
             @SP
             M=M-1
-            // *SP = !*SP
+            // D = *SP - D  <--> x - y
             A=M
-            M=!M
-            // D = D & *SP
-            D=D&M
-            
-            // if D == 0
-            @EQUAL
+            D=M-D
+            M=D
+    
+            // if x == 0
+            @IS_EQ{self.label_suffix}
             D;JEQ
             // else
-            @NOT_EQUAL
+            @ELSE{self.label_suffix}
             D;JNE
-            
-            (EQUAL)
+    
+            (IS_EQ{self.label_suffix})
             // True in Hack ASM is -1
             @SP
             A=M
@@ -215,8 +228,10 @@ class ByteCodeInst:
             // SP++
             @SP
             M=M+1
-            
-            (NOT_EQUAL)
+            @END_IF{self.label_suffix}
+            0;JEQ
+    
+            (ELSE{self.label_suffix})
             // False in Hack ASM is 0
             @SP
             A=M
@@ -224,6 +239,68 @@ class ByteCodeInst:
             // SP++
             @SP
             M=M+1
+    
+            (END_IF{self.label_suffix})
+            D=0
+            """
+        )
+
+    def _build_lt(self) -> str:
+        """
+        lt -> x < y
+
+        SP--
+        x = *SP
+        SP--
+        y = *SP
+        *SP = -1 if x < y else 0
+        SP++
+        """
+        return dedent(
+            f"""
+            // SP--
+            @SP
+            M=M-1
+            // D = *SP
+            A=M
+            D=M
+            // SP--
+            @SP
+            M=M-1
+            // D = *SP - D  <--> x - y
+            A=M
+            D=M-D
+            M=D
+
+            // if x < 0
+            @IS_LESS_THAN{self.label_suffix}
+            D;JLT
+            // else
+            @ELSE{self.label_suffix}
+            D;JGE
+
+            (IS_LESS_THAN{self.label_suffix})
+            // True in Hack ASM is -1
+            @SP
+            A=M
+            M=-1
+            // SP++
+            @SP
+            M=M+1
+            @END_IF{self.label_suffix}
+            0;JEQ
+
+            (ELSE{self.label_suffix})
+            // False in Hack ASM is 0
+            @SP
+            A=M
+            M=0
+            // SP++
+            @SP
+            M=M+1
+            
+            (END_IF{self.label_suffix})
+            D=0
             """
         )
 
