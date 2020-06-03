@@ -43,26 +43,23 @@ class Command(Enum):
 
     @classmethod
     def from_string(cls, raw_cmd: str) -> "Command":
-        if raw_cmd == "push":
-            return cls.PUSH
-        elif raw_cmd == "pop":
-            return cls.POP
-        elif raw_cmd == "add":
-            return cls.ADD
-        elif raw_cmd == "sub":
-            return cls.SUB
-        elif raw_cmd == "neg":
-            return cls.NEG
-        elif raw_cmd == "eq":
-            return cls.EQ
-        elif raw_cmd == "lt":
-            return cls.LT
-        elif raw_cmd == "gt":
-            return cls.GT
-        elif raw_cmd == "not":
-            return cls.NOT
-        else:
-            raise InvalidCommandException("Invalid command.")
+        str_to_cmd = {
+            "push": cls.PUSH,
+            "pop": cls.POP,
+            "add": cls.ADD,
+            "sub": cls.SUB,
+            "neg": cls.NEG,
+            "eq": cls.EQ,
+            "lt": cls.LT,
+            "gt": cls.GT,
+            "not": cls.NOT,
+            "and": cls.AND,
+            "or": cls.OR,
+        }
+        try:
+            return str_to_cmd[raw_cmd]
+        except KeyError as e:
+            raise InvalidCommandException("Invalid command.") from e
 
 
 class Segment(Enum):
@@ -125,6 +122,12 @@ class ByteCodeInst:
             inst = self._build_gt()
         elif self.cmd == Command.NOT:
             inst = self._build_not()
+        elif self.cmd == Command.NEG:
+            inst = self._build_neg()
+        elif self.cmd == Command.AND:
+            inst = self._build_and()
+        elif self.cmd == Command.OR:
+            inst = self._build_or()
         else:
             raise ValueError("Unsupported command.")
 
@@ -392,6 +395,78 @@ class ByteCodeInst:
             @SP
             A=M
             M=!D
+            @SP
+            M=M+1
+            """
+        )
+
+    def _build_neg(self):
+        """
+         neg -> -x
+
+         SP--
+         x = *SP
+         *SP = 0 - *SP
+         SP++
+         """
+        return dedent(
+            f"""
+            // SP--
+            @SP
+            M=M-1
+            // D = *SP
+            A=M
+            D=M
+            // *SP = 0 - D
+            @SP
+            A=M
+            M=-D
+            @SP
+            M=M+1
+            """
+        )
+
+    def _build_and(self) -> str:
+        """
+        SP--
+        temp0 = *SP
+        SP--
+        *SP = *SP & temp0
+        SP++
+        """
+        return dedent(
+            """
+            @SP
+            M=M-1
+            A=M
+            D=M
+            @SP
+            M=M-1
+            A=M
+            M=M&D
+            @SP
+            M=M+1
+            """
+        )
+
+    def _build_or(self) -> str:
+        """
+        SP--
+        temp0 = *SP
+        SP--
+        *SP = *SP | temp0
+        SP++
+        """
+        return dedent(
+            """
+            @SP
+            M=M-1
+            A=M
+            D=M
+            @SP
+            M=M-1
+            A=M
+            M=M|D
             @SP
             M=M+1
             """

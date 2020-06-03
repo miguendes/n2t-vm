@@ -106,7 +106,7 @@ def test_add_to_asm(byte_code, asm):
     "byte_code, asm",
     [
         (
-            ByteCodeInst.from_string("eq"),
+            ByteCodeInst.from_string("eq", label_suffix=""),
             "@SP\nM=M-1\nA=M\nD=M\n@SP\nM=M-1\nA=M\nD=M-D\nM=D\n"
             "@IS_EQ\nD;JEQ\n@ELSE\nD;JNE\n(IS_EQ)\n@SP\nA=M\nM=-1\n@SP\nM=M+1\n"
             "@END_IF\n0;JEQ\n(ELSE)\n@SP\nA=M\nM=0\n@SP\nM=M+1\n(END_IF)\nD=0",
@@ -121,7 +121,7 @@ def test_eq_to_asm(byte_code, asm):
     "byte_code, asm",
     [
         (
-            ByteCodeInst.from_string("lt"),
+            ByteCodeInst.from_string("lt", label_suffix=""),
             "@SP\nM=M-1\nA=M\nD=M\n@SP\nM=M-1\nA=M\nD=M-D\nM=D\n"
             "@IS_LESS_THAN\nD;JLT\n@ELSE\nD;JGE\n(IS_LESS_THAN)\n"
             "@SP\nA=M\nM=-1\n@SP\nM=M+1\n@END_IF\n0;JEQ\n(ELSE)\n"
@@ -137,7 +137,7 @@ def test_lt_to_asm(byte_code, asm):
     "byte_code, asm",
     [
         (
-            ByteCodeInst.from_string("gt"),
+            ByteCodeInst.from_string("gt", label_suffix=""),
             "@SP\nM=M-1\nA=M\nD=M\n@SP\nM=M-1\nA=M\nD=M-D\nM=D\n@IS_GT\nD;JGT\n"
             "@ELSE\nD;JLE\n(IS_GT)\n@SP\nA=M\nM=-1\n@SP\nM=M+1\n@END_IF\n0;JEQ\n"
             "(ELSE)\n@SP\nA=M\nM=0\n@SP\nM=M+1\n(END_IF)\nD=0",
@@ -158,4 +158,43 @@ def test_lt_to_asm(byte_code, asm):
     ],
 )
 def test_not_to_asm(byte_code, asm):
+    assert byte_code.to_asm() == asm
+
+
+@pytest.mark.parametrize(
+    "byte_code, asm",
+    [
+        (
+            ByteCodeInst.from_string(line="neg"),
+            "@SP\nM=M-1\nA=M\nD=M\n@SP\nA=M\nM=-D\n@SP\nM=M+1",
+        )
+    ],
+)
+def test_not_to_asm(byte_code, asm):
+    assert byte_code.to_asm() == asm
+
+
+@pytest.mark.parametrize(
+    "byte_code, asm",
+    [
+        (
+            ByteCodeInst.from_string(line="and"),
+            "@SP\nM=M-1\nA=M\nD=M\n@SP\nM=M-1\nA=M\nM=M&D\n@SP\nM=M+1",
+        )
+    ],
+)
+def test_and_to_asm(byte_code, asm):
+    assert byte_code.to_asm() == asm
+
+
+@pytest.mark.parametrize(
+    "byte_code, asm",
+    [
+        (
+            ByteCodeInst.from_string(line="or"),
+            "@SP\nM=M-1\nA=M\nD=M\n@SP\nM=M-1\nA=M\nM=M|D\n@SP\nM=M+1",
+        )
+    ],
+)
+def test_or_to_asm(byte_code, asm):
     assert byte_code.to_asm() == asm

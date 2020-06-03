@@ -21,6 +21,12 @@ TEST_GT_ASM = TEST_CODE_DIR / "test_gt/test_gt.asm"
 TEST_NOT = TEST_CODE_DIR / "test_not/test_not.vm"
 TEST_NOT_ASM = TEST_CODE_DIR / "test_not/test_not.asm"
 
+TEST_NEG = TEST_CODE_DIR / "test_neg/test_neg.vm"
+TEST_NEG_ASM = TEST_CODE_DIR / "test_neg/test_neg.asm"
+
+TEST_LATEST = TEST_CODE_DIR / "test_and/test_and.vm"
+TEST_LATEST_ASM = TEST_CODE_DIR / "test_and/test_and.asm"
+
 
 def translate(inst: str) -> str:
     cleaned_inst = clean_instructions(inst, to_lower=True)
@@ -29,10 +35,10 @@ def translate(inst: str) -> str:
 
 
 if __name__ == "__main__":
-    with open(TEST_NOT) as f:
+    with open(TEST_LATEST) as f:
         inst = f.read()
 
-    with open(TEST_NOT_ASM, "w") as f:
+    with open(TEST_LATEST_ASM, "w") as f:
         s = translate(inst)
         f.write(s)
         print(s)
