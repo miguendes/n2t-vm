@@ -1,7 +1,7 @@
 import random
 import re
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, auto
 from textwrap import dedent
 from typing import List, Optional
 
@@ -63,16 +63,28 @@ class Command(Enum):
 
 
 class Segment(Enum):
-    CONSTANT = 1
-
-    _SYMBOL_TABLE = {"constant": CONSTANT}
+    CONSTANT = auto()
+    LCL = auto()
+    ARG = auto()
+    THIS = auto()
+    THAT = auto()
 
     @classmethod
     def from_string(cls, raw_seg: str) -> "Segment":
-        if raw_seg == "constant":
-            return cls.CONSTANT
-        else:
-            raise InvalidSegmentException("Invalid segment.")
+        str_to_seg = {
+            "constant": cls.CONSTANT,
+            "argument": cls.ARG,
+            "local": cls.LCL,
+            "this": cls.THIS,
+            "that": cls.THAT,
+        }
+        try:
+            return str_to_seg[raw_seg]
+        except KeyError as e:
+            raise InvalidSegmentException("Invalid segment.") from e
+
+    def __str__(self) -> str:
+        return str(self.name).upper()
 
 
 @dataclass
@@ -108,8 +120,10 @@ class ByteCodeInst:
         Returns a clean set of assembly instructions that performs
         the byte code operation.
         """
-        if self.cmd == Command.PUSH and self.segment.CONSTANT:
+        if self.cmd == Command.PUSH and self.segment == Segment.CONSTANT:
             inst = self._build_push_constant()
+        elif self.cmd == Command.PUSH:
+            inst = self._build_push_segment()
         elif self.cmd == Command.ADD:
             inst = self._build_add()
         elif self.cmd == Command.SUB:
@@ -467,6 +481,34 @@ class ByteCodeInst:
             M=M-1
             A=M
             M=M|D
+            @SP
+            M=M+1
+            """
+        )
+
+    def _build_push_segment(self):
+        """
+        addr = ARG + value
+        *SP = *addr
+        SP++
+        """
+        value = self.value
+        label = str(self.segment)
+        return dedent(
+            f"""
+            // D = offset
+            @{value}
+            D=A
+            // D = D + ARG
+            @{label}
+            D=D+M
+            // *SP = *D
+            A=D
+            D=M
+            @SP
+            A=M
+            M=D
+            // SP++
             @SP
             M=M+1
             """

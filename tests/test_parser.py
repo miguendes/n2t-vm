@@ -80,6 +80,31 @@ def test_push_const_to_asm(byte_code, asm):
     "byte_code, asm",
     [
         (
+            ByteCodeInst.from_string("push argument 6"),
+            "@6\nD=A\n@ARG\nD=D+M\nA=D\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1",
+        ),
+        (
+            ByteCodeInst.from_string("push local 6"),
+            "@6\nD=A\n@LCL\nD=D+M\nA=D\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1",
+        ),
+        (
+            ByteCodeInst.from_string("push this 6"),
+            "@6\nD=A\n@THIS\nD=D+M\nA=D\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1",
+        ),
+        (
+            ByteCodeInst.from_string("push that 6"),
+            "@6\nD=A\n@THAT\nD=D+M\nA=D\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1",
+        ),
+    ],
+)
+def test_push_arg_to_asm(byte_code, asm):
+    assert byte_code.to_asm() == asm
+
+
+@pytest.mark.parametrize(
+    "byte_code, asm",
+    [
+        (
             ByteCodeInst.from_string("add"),
             "@SP\nM=M-1\nA=M\nD=M\n@SP\nM=M-1\nA=M\nM=M-D\n@SP\nM=M+1",
         )

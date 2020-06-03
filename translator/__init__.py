@@ -4,10 +4,14 @@ from translator.parser import parse, clean_instructions
 
 PROJECT_07_DIR = pathlib.Path("/home/miguel/nand2tetris/projects/07")
 SIMPLE_ADD_DIR = PROJECT_07_DIR / pathlib.Path("StackArithmetic/SimpleAdd")
+STACK_TEST_DIR = PROJECT_07_DIR / pathlib.Path("StackArithmetic/StackTest")
 TEST_CODE_DIR = PROJECT_07_DIR / "test_code"
 
 SIMPLE_ADD = SIMPLE_ADD_DIR / "SimpleAdd.vm"
 SIMPLE_ADD_ASM = SIMPLE_ADD_DIR / "SimpleAdd.asm"
+
+STACK_TEST = STACK_TEST_DIR / "StackTest.vm"
+STACK_TEST_ASM = STACK_TEST_DIR / "StackTest.asm"
 
 TEST_EQ = TEST_CODE_DIR / "test_eq/test_eq.vm"
 TEST_EQ_ASM = TEST_CODE_DIR / "test_eq/test_eq.asm"
@@ -26,6 +30,9 @@ TEST_NEG_ASM = TEST_CODE_DIR / "test_neg/test_neg.asm"
 
 TEST_LATEST = TEST_CODE_DIR / "test_and/test_and.vm"
 TEST_LATEST_ASM = TEST_CODE_DIR / "test_and/test_and.asm"
+
+TEST_LATEST = TEST_CODE_DIR / "test_arg/test_arg.vm"
+TEST_LATEST_ASM = TEST_CODE_DIR / "test_arg/test_arg.asm"
 
 
 def translate(inst: str) -> str:
