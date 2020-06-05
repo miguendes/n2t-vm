@@ -34,6 +34,11 @@ TEST_LATEST_ASM = TEST_CODE_DIR / "test_and/test_and.asm"
 TEST_LATEST = TEST_CODE_DIR / "test_arg/test_arg.vm"
 TEST_LATEST_ASM = TEST_CODE_DIR / "test_arg/test_arg.asm"
 
+seg = "temp"
+
+TEST_LATEST = TEST_CODE_DIR / f"test_{seg}/test_{seg}.vm"
+TEST_LATEST_ASM = TEST_CODE_DIR / f"test_{seg}/test_{seg}.asm"
+
 
 def translate(inst: str) -> str:
     cleaned_inst = clean_instructions(inst, to_lower=True)

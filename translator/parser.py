@@ -5,11 +5,15 @@ from enum import Enum, auto
 from textwrap import dedent
 from typing import List, Optional
 
+COMMENT_TOKEN = "//"
+
 
 def clean(ins: str) -> List[str]:
     for line in ins.split("\n"):
         line = line.strip()
-        if not line or line.startswith("//"):
+        if COMMENT_TOKEN in line:
+            line = line[: line.index(COMMENT_TOKEN)].strip()
+        if not line:
             continue
         line = " ".join(re.split(r"\s+", line, flags=re.UNICODE))
         yield line
@@ -68,6 +72,7 @@ class Segment(Enum):
     ARG = auto()
     THIS = auto()
     THAT = auto()
+    TEMP = auto()
 
     @classmethod
     def from_string(cls, raw_seg: str) -> "Segment":
@@ -77,6 +82,7 @@ class Segment(Enum):
             "local": cls.LCL,
             "this": cls.THIS,
             "that": cls.THAT,
+            "temp": cls.TEMP,
         }
         try:
             return str_to_seg[raw_seg]
@@ -122,6 +128,8 @@ class ByteCodeInst:
         """
         if self.cmd == Command.PUSH and self.segment == Segment.CONSTANT:
             inst = self._build_push_constant()
+        elif self.segment == Segment.TEMP:
+            inst = self._handle_temp()
         elif self.cmd == Command.PUSH:
             inst = self._build_push_segment()
         elif self.cmd == Command.ADD:
@@ -146,6 +154,13 @@ class ByteCodeInst:
             raise ValueError("Unsupported command.")
 
         return clean_instructions(inst)
+
+    def _handle_temp(self):
+        if self.cmd == Command.PUSH:
+            inst = self._build_push_temp()
+        else:
+            inst = self._build_pop_temp()
+        return inst
 
     def _build_push_constant(self) -> str:
         """
@@ -512,6 +527,55 @@ class ByteCodeInst:
             @SP
             M=M+1
             """
+        )
+
+    def _build_push_temp(self):
+        """
+        addr = ARG + value
+        *SP = *addr
+        SP++
+        """
+        value = self.value
+        return dedent(
+            f"""
+              // i = offset
+              @{value}
+              D=A
+              // addr = i + 5
+              @5
+              D=D+A
+              // *SP = *addr
+              A=D
+              D=M
+              @SP
+              A=M
+              M=D
+              // SP++
+              @SP
+              M=M+1
+              """
+        )
+
+    def _build_pop_temp(self):
+        """
+        addr = ARG + value
+        SP--
+        *addr = *SP
+        """
+        value = self.value
+        return dedent(
+            f"""
+              @{value}
+              D=A // D = i
+              @5
+              D=D+A // addr = 5 + i
+              @SP
+              M=M-1
+              A=M
+              D=D+M  // addr = addr + RAM[SP]
+              A=D-M  // A = addr - RAM[SP] 
+              M=D-A  // RAM[A] = addr - A
+              """
         )
 
 

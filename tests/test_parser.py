@@ -34,6 +34,7 @@ from translator.parser import clean_instructions, ByteCodeInst, Command, Segment
             ),
             "push temp 9",
         ),
+        ("\n\n\tpush temp 9 // add to stack", "push temp 9"),
     ],
 )
 def test_clean_instructions(ins, expected):
@@ -222,4 +223,21 @@ def test_and_to_asm(byte_code, asm):
     ],
 )
 def test_or_to_asm(byte_code, asm):
+    assert byte_code.to_asm() == asm
+
+
+@pytest.mark.parametrize(
+    "byte_code, asm",
+    [
+        (
+            ByteCodeInst.from_string(line="push temp 7"),
+            "@7\nD=A\n@5\nD=D+A\nA=D\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1",
+        ),
+        (
+            ByteCodeInst.from_string(line="pop temp 6"),
+            "@6\nD=A\n@5\nD=D+A\n@SP\nM=M-1\nA=M\nD=D+M\nA=D-M\nM=D-A",
+        ),
+    ],
+)
+def test_temp_to_asm(byte_code, asm):
     assert byte_code.to_asm() == asm
