@@ -2,15 +2,16 @@ import random
 import re
 from dataclasses import dataclass
 from enum import Enum, auto
-from functools import lru_cache
 from textwrap import dedent
 from typing import List, Optional
+
+NEW_LINE_TOKEN = "\n"
 
 COMMENT_TOKEN = "//"
 
 
 def clean(ins: str) -> List[str]:
-    for line in ins.split("\n"):
+    for line in ins.split(NEW_LINE_TOKEN):
         line = line.strip()
         if COMMENT_TOKEN in line:
             line = line[: line.index(COMMENT_TOKEN)].strip()
@@ -21,7 +22,7 @@ def clean(ins: str) -> List[str]:
 
 
 def clean_instructions(ins: str, to_lower: bool = False) -> str:
-    inst = "\n".join(clean(ins))
+    inst = NEW_LINE_TOKEN.join(clean(ins))
     return inst.lower() if to_lower else inst
 
 
@@ -738,5 +739,5 @@ def parse(ins: str, filename: str) -> List[ByteCodeInst]:
     Parses a instruction a set of bytecode instructions as string
     to a list of ByteCodeInst.
     """
-    for line in ins.split("\n"):
+    for line in ins.split(NEW_LINE_TOKEN):
         yield ByteCodeInst.from_string(line, static_label=filename)
