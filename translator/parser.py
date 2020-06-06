@@ -2,6 +2,7 @@ import random
 import re
 from dataclasses import dataclass
 from enum import Enum, auto
+from functools import lru_cache
 from textwrap import dedent
 from typing import List, Optional
 
@@ -73,6 +74,8 @@ class Segment(Enum):
     THIS = auto()
     THAT = auto()
     TEMP = auto()
+    STATIC = auto()
+    POINTER = auto()
 
     @classmethod
     def from_string(cls, raw_seg: str) -> "Segment":
@@ -83,6 +86,8 @@ class Segment(Enum):
             "this": cls.THIS,
             "that": cls.THAT,
             "temp": cls.TEMP,
+            "static": cls.STATIC,
+            "pointer": cls.POINTER,
         }
         try:
             return str_to_seg[raw_seg]
@@ -99,10 +104,14 @@ class ByteCodeInst:
     cmd: Command
     segment: Optional[Segment] = None
     value: Optional[int] = None
+    static_label: Optional[str] = None
 
     @classmethod
     def from_string(
-        cls, line: str, label_suffix: Optional[str] = None
+        cls,
+        line: str,
+        label_suffix: Optional[str] = None,
+        static_label: Optional[str] = None,
     ) -> "ByteCodeInst":
         if label_suffix is None:
             label_suffix = str(random.randint(0, 1_000_000))
@@ -119,6 +128,7 @@ class ByteCodeInst:
             Command.from_string(raw_cmd),
             Segment.from_string(raw_seg),
             int(value),
+            static_label,
         )
 
     def to_asm(self) -> str:
@@ -126,42 +136,68 @@ class ByteCodeInst:
         Returns a clean set of assembly instructions that performs
         the byte code operation.
         """
-        if self.cmd == Command.PUSH and self.segment == Segment.CONSTANT:
-            inst = self._build_push_constant()
-        elif self.segment == Segment.TEMP:
-            inst = self._handle_temp()
-        elif self.cmd == Command.PUSH:
-            inst = self._build_push_segment()
-        elif self.cmd == Command.POP:
-            inst = self._build_pop_segment()
-        elif self.cmd == Command.ADD:
-            inst = self._build_add()
-        elif self.cmd == Command.SUB:
-            inst = self._build_sub()
-        elif self.cmd == Command.EQ:
-            inst = self._build_eq()
-        elif self.cmd == Command.LT:
-            inst = self._build_lt()
-        elif self.cmd == Command.GT:
-            inst = self._build_gt()
-        elif self.cmd == Command.NOT:
-            inst = self._build_not()
-        elif self.cmd == Command.NEG:
-            inst = self._build_neg()
-        elif self.cmd == Command.AND:
-            inst = self._build_and()
-        elif self.cmd == Command.OR:
-            inst = self._build_or()
-        else:
+        try:
+            build_instruction = self._handlers_map()[self.segment]
+            return clean_instructions(build_instruction())
+        except KeyError:
+            pass
+        try:
+            build_instruction = self._handlers_map()[self.cmd]
+            return clean_instructions(build_instruction())
+        except KeyError:
             raise ValueError("Unsupported command.")
 
-        return clean_instructions(inst)
+    def _handlers_map(self):
+        """Maps segments and commands to a handler."""
+        return {
+            Segment.CONSTANT: self._build_push_constant,
+            Segment.TEMP: self._handle_temp,
+            Segment.STATIC: self._handle_static,
+            Segment.POINTER: self._handle_pointer,
+            Segment.LCL: self._handle_generic_segment,
+            Segment.ARG: self._handle_generic_segment,
+            Segment.THIS: self._handle_generic_segment,
+            Segment.THAT: self._handle_generic_segment,
+            Command.ADD: self._build_add,
+            Command.SUB: self._build_sub,
+            Command.EQ: self._build_eq,
+            Command.GT: self._build_gt,
+            Command.NOT: self._build_not,
+            Command.NEG: self._build_neg,
+            Command.AND: self._build_and,
+            Command.OR: self._build_or,
+        }
 
     def _handle_temp(self):
+        """Handle push/pop temp case."""
         if self.cmd == Command.PUSH:
             inst = self._build_push_temp()
         else:
             inst = self._build_pop_temp()
+        return inst
+
+    def _handle_static(self):
+        """Handle push/pop static case."""
+        if self.cmd == Command.PUSH:
+            inst = self._build_push_static()
+        else:
+            inst = self._build_pop_static()
+        return inst
+
+    def _handle_pointer(self):
+        """Handle push/pop pointer case."""
+        if self.cmd == Command.PUSH:
+            inst = self._build_push_pointer()
+        else:
+            inst = self._build_pop_pointer()
+        return inst
+
+    def _handle_generic_segment(self):
+        """Push/Pop to/from LCL, ARG, THIS, THAT"""
+        if self.cmd == Command.PUSH:
+            inst = self._build_push_segment()
+        else:
+            inst = self._build_pop_segment()
         return inst
 
     def _build_push_constant(self) -> str:
@@ -606,7 +642,101 @@ class ByteCodeInst:
               """
         )
 
+    def _build_push_static(self):
+        """
+        *SP = *static
+        SP++
+        """
+        value = self.value
+        static_label = self.static_label
+        return dedent(
+            f"""
+              @{static_label}.{value}
+              D=M
+              @SP
+              A=M
+              M=D
+              // SP++
+              @SP
+              M=M+1
+              """
+        )
 
-def parse(ins: str) -> List[ByteCodeInst]:
+    def _build_pop_static(self):
+        """
+        SP--
+        *static = *SP
+        """
+        value = self.value
+        static_label = self.static_label
+        return dedent(
+            f"""
+              // SP--
+              @SP
+              M=M-1
+              // temp = *SP
+              A=M
+              D=M
+              // *static = temp
+              @{static_label}.{value}
+              M=D
+              """
+        )
+
+    def _get_pointer(self) -> str:
+        """Returns the appropriate label for the pointer"""
+        pointers = {1: "THAT", 0: "THIS"}
+        try:
+            return pointers[self.value]
+        except KeyError:
+            raise InvalidSegmentException(
+                f"Expected pointer be 0 or 1 but got {self.value}"
+            )
+
+    def _build_push_pointer(self):
+        """
+        *SP = THIS/THAT
+        SP++
+        """
+        return dedent(
+            f"""
+              // temp = THIS
+              @{self._get_pointer()}
+              D=M
+              // *SP = temp
+              @SP
+              A=M
+              M=D
+              // SP++
+              @SP
+              M=M+1
+              """
+        )
+
+    def _build_pop_pointer(self):
+        """
+        *SP = THIS/THAT
+        SP++
+        """
+        return dedent(
+            f"""
+              // SP--
+              @SP
+              M=M-1
+              // temp = *SP
+              A=M
+              D=M
+              // pointer = temp
+              @{self._get_pointer()}
+              M=D
+              """
+        )
+
+
+def parse(ins: str, filename: str) -> List[ByteCodeInst]:
+    """
+    Parses a instruction a set of bytecode instructions as string
+    to a list of ByteCodeInst.
+    """
     for line in ins.split("\n"):
-        yield ByteCodeInst.from_string(line)
+        yield ByteCodeInst.from_string(line, static_label=filename)

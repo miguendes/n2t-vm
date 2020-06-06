@@ -2,7 +2,13 @@ from textwrap import dedent
 
 import pytest
 
-from translator.parser import clean_instructions, ByteCodeInst, Command, Segment
+from translator.parser import (
+    clean_instructions,
+    ByteCodeInst,
+    Command,
+    Segment,
+    InvalidSegmentException,
+)
 
 
 @pytest.mark.parametrize(
@@ -283,3 +289,59 @@ def test_segments_to_asm(byte_code, asm):
 )
 def test_temp_to_asm(byte_code, asm):
     assert byte_code.to_asm() == asm
+
+
+@pytest.mark.parametrize(
+    "byte_code, asm",
+    [
+        (
+            ByteCodeInst.from_string(line="push static 7", static_label="Test"),
+            "@Test.7\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1",
+        ),
+        (
+            ByteCodeInst.from_string(line="pop static 6", static_label="Test"),
+            "@SP\nM=M-1\nA=M\nD=M\n@Test.6\nM=D",
+        ),
+    ],
+)
+def test_static_to_asm(byte_code, asm):
+    assert byte_code.to_asm() == asm
+
+
+@pytest.mark.parametrize(
+    "byte_code, asm",
+    [
+        (
+            ByteCodeInst.from_string(line="push pointer 0"),
+            "@THIS\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1",
+        ),
+        (
+            ByteCodeInst.from_string(line="push pointer 1"),
+            "@THAT\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1",
+        ),
+        (
+            ByteCodeInst.from_string(line="pop pointer 0"),
+            "@SP\nM=M-1\nA=M\nD=M\n@THIS\nM=D",
+        ),
+        (
+            ByteCodeInst.from_string(line="pop pointer 1"),
+            "@SP\nM=M-1\nA=M\nD=M\n@THAT\nM=D",
+        ),
+    ],
+)
+def test_pointer_to_asm(byte_code, asm):
+    assert byte_code.to_asm() == asm
+
+
+@pytest.mark.parametrize(
+    "byte_code",
+    [
+        ByteCodeInst.from_string(line="push pointer -1"),
+        ByteCodeInst.from_string(line="push pointer 2"),
+        ByteCodeInst.from_string(line="push pointer 32"),
+        ByteCodeInst.from_string(line="push pointer 022"),
+    ],
+)
+def test_pointer_must_be_0_or_1(byte_code):
+    with pytest.raises(InvalidSegmentException):
+        byte_code.to_asm()
