@@ -230,6 +230,48 @@ def test_or_to_asm(byte_code, asm):
     "byte_code, asm",
     [
         (
+            ByteCodeInst.from_string(line="push argument 7"),
+            "@7\nD=A\n@ARG\nD=D+M\nA=D\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1",
+        ),
+        (
+            ByteCodeInst.from_string(line="pop argument 7"),
+            "@7\nD=A\n@ARG\nD=D+M\n@SP\nM=M-1\nA=M\nD=D+M\nA=D-M\nM=D-A",
+        ),
+        (
+            ByteCodeInst.from_string(line="push local 7"),
+            "@7\nD=A\n@LCL\nD=D+M\nA=D\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1",
+        ),
+        (
+            ByteCodeInst.from_string(line="pop local 7"),
+            "@7\nD=A\n@LCL\nD=D+M\n@SP\nM=M-1\nA=M\nD=D+M\nA=D-M\nM=D-A",
+        ),
+        (
+            ByteCodeInst.from_string(line="push this 7"),
+            "@7\nD=A\n@THIS\nD=D+M\nA=D\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1",
+        ),
+        (
+            ByteCodeInst.from_string(line="pop this 7"),
+            "@7\nD=A\n@THIS\nD=D+M\n@SP\nM=M-1\nA=M\nD=D+M\nA=D-M\nM=D-A",
+        ),
+        (
+            ByteCodeInst.from_string(line="push that 7"),
+            "@7\nD=A\n@THAT\nD=D+M\nA=D\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1",
+        ),
+        (
+            ByteCodeInst.from_string(line="pop that 7"),
+            "@7\nD=A\n@THAT\nD=D+M\n@SP\nM=M-1\nA=M\nD=D+M\nA=D-M\nM=D-A",
+        ),
+    ],
+)
+def test_segments_to_asm(byte_code, asm):
+    """Tests generic segments: LCL, ARG, THIS, THAT"""
+    assert byte_code.to_asm() == asm
+
+
+@pytest.mark.parametrize(
+    "byte_code, asm",
+    [
+        (
             ByteCodeInst.from_string(line="push temp 7"),
             "@7\nD=A\n@5\nD=D+A\nA=D\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1",
         ),

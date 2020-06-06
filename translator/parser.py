@@ -132,6 +132,8 @@ class ByteCodeInst:
             inst = self._handle_temp()
         elif self.cmd == Command.PUSH:
             inst = self._build_push_segment()
+        elif self.cmd == Command.POP:
+            inst = self._build_pop_segment()
         elif self.cmd == Command.ADD:
             inst = self._build_add()
         elif self.cmd == Command.SUB:
@@ -526,6 +528,32 @@ class ByteCodeInst:
             // SP++
             @SP
             M=M+1
+            """
+        )
+
+    def _build_pop_segment(self):
+        """
+        addr = segmentPointer + offset
+        SP--
+        *addr = *SP
+        """
+        value = self.value
+        label = str(self.segment)
+        return dedent(
+            f"""
+            // D = offset
+            @{value}
+            D=A
+            // D = offset + segmentPointer
+            @{label}
+            D=D+M
+            // SP--
+            @SP
+            M=M-1
+            A=M
+            D=D+M  // addr = addr + RAM[SP]
+            A=D-M  // A = addr - RAM[SP] 
+            M=D-A  // RAM[A] = addr - A
             """
         )
 
